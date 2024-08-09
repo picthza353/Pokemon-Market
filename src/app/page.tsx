@@ -327,7 +327,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="relative grid grid-cols-1 gap-5 mt-6 sm:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
+        <div className="relative grid grid-cols-1 gap-5 mt-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
           {notFound || currentData.length === 0 ? (
             <div className="col-span-6 text-center text-red-500 text-xl">
               No results found.
