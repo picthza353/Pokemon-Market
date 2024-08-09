@@ -1,112 +1,366 @@
-import Image from "next/image";
+/* eslint-disable @next/next/no-img-element */
+"use client";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import Nav from "./components/Nav";
+import Card from "./components/Card";
+import Cart from "./components/Cart";
+import Pagination from "./components/Pagination";
+import { FaChevronDown } from "react-icons/fa";
+import { MdOutlineCatchingPokemon } from "react-icons/md";
+
+export interface Data {
+  id: string;
+  name: string;
+  cardmarket?: {
+    prices?: {
+      averageSellPrice?: number;
+    };
+  };
+  set: {
+    id: string;
+    name: string;
+    total: number;
+  };
+  rarity: string;
+  types: string[];
+  images: {
+    small: string;
+  };
+}
+
+export interface CartItem {
+  card: Data;
+  quantity: number;
+}
 
 export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:size-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+  const [data, setData] = useState<Data[]>([]);
+  const [filteredData, setFilteredData] = useState<Data[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isCartVisible, setIsCartVisible] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [sets, setSets] = useState<{ id: string; name: string }[]>([]);
+  const [rarities, setRarities] = useState<string[]>([]);
+  const [types, setTypes] = useState<string[]>([]);
+  const [selectedSet, setSelectedSet] = useState<string>("");
+  const [selectedRarity, setSelectedRarity] = useState<string>("");
+  const [selectedType, setSelectedType] = useState<string>("");
+  const [search, setSearch] = useState<Data[]>([]);
+  const [notFound, setNotFound] = useState<boolean>(false);
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const currentData = filteredData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get("https://api.pokemontcg.io/v2/cards");
+        setData(response.data.data);
+        setFilteredData(response.data.data);
+      } catch (error) {
+        setError("Error fetching data. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchSets = async () => {
+      try {
+        const response = await axios.get("https://api.pokemontcg.io/v2/sets");
+        setSets(response.data.data);
+      } catch (error) {
+        console.error("Error fetching sets:", error);
+      }
+    };
+
+    fetchSets();
+  }, []);
+
+  useEffect(() => {
+    const fetchRarities = async () => {
+      try {
+        const response = await axios.get(
+          "https://api.pokemontcg.io/v2/rarities"
+        );
+        setRarities(response.data.data);
+      } catch (error) {
+        console.error("Error fetching rarities:", error);
+      }
+    };
+
+    fetchRarities();
+  }, []);
+
+  useEffect(() => {
+    const fetchTypes = async () => {
+      try {
+        const response = await axios.get("https://api.pokemontcg.io/v2/types");
+        setTypes(response.data.data);
+      } catch (error) {
+        console.error("Error fetching types:", error);
+      }
+    };
+
+    fetchTypes();
+  }, []);
+
+  useEffect(() => {
+    let newFilteredData = search.length > 0 ? search : data;
+
+    if (selectedSet) {
+      newFilteredData = newFilteredData.filter(
+        (card) => card.set.id === selectedSet
+      );
+      setCurrentPage(1);
+    }
+
+    if (selectedRarity) {
+      newFilteredData = newFilteredData.filter(
+        (card) => card.rarity === selectedRarity
+      );
+      setCurrentPage(1);
+    }
+
+    if (selectedType) {
+      newFilteredData = newFilteredData.filter((card) =>
+        card.types.includes(selectedType)
+      );
+      setCurrentPage(1);
+    }
+
+    setFilteredData(newFilteredData);
+  }, [selectedSet, selectedRarity, selectedType, search, data]);
+
+  const handleSearch = (results: Data[], notFoundStatus: boolean) => {
+    setSearch(results);
+    setNotFound(notFoundStatus);
+  };
+
+  const handleAddToCart = (card: Data) => {
+    setCartItems((prevItems) => {
+      const existingItem = prevItems.find((item) => item.card.id === card.id);
+      if (existingItem) {
+        return prevItems.map((item) =>
+          item.card.id === card.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      return [...prevItems, { card, quantity: 1 }];
+    });
+  };
+
+  const handleUpdateCart = (card: Data, quantity: number) => {
+    setCartItems((prevItems) =>
+      prevItems
+        .map((item) =>
+          item.card.id === card.id ? { ...item, quantity } : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
+  const handleClearCart = () => {
+    setCartItems([]);
+  };
+
+  const toggleCartVisibility = () => {
+    setIsCartVisible(!isCartVisible);
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const clearSet = () => setSelectedSet("");
+  const clearRarity = () => setSelectedRarity("");
+  const clearType = () => setSelectedType("");
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="flex items-center space-x-2">
+          <MdOutlineCatchingPokemon className="animate-spin h-8 w-8 text-red-500 bg-white rounded-full" />
+          <span className="text-xl text-white font-semibold">Loading...</span>
         </div>
       </div>
+    );
+  }
 
-      <div className="relative z-[-1] flex place-items-center before:absolute before:h-[300px] before:w-full before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 sm:before:w-[480px] sm:after:w-[240px] before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
+  if (error) {
+    return (
+      <div className="flex justify-center items-center text-red-500">
+        {error}
       </div>
+    );
+  }
 
-      <div className="mb-32 grid text-center lg:mb-0 lg:w-full lg:max-w-5xl lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Docs{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
+  return (
+    <main className="flex justify-center items-center relative">
+      <div className="relative top-6 w-[90%] sm:w-4/5">
+        <Nav
+          title="Pokemon market"
+          onCartClick={toggleCartVisibility}
+          cartItemCount={cartItems.length}
+          onSearch={handleSearch}
+          originalData={data}
+        />
+        <div className="flex flex-col sm:flex-row sm:justify-between">
+          <div className="flex justify-start items-center">
+            <p className="text-[18px] text-white font-semibold">Choose Card</p>
+          </div>
 
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Learn{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
+          <div className=" flex justify-between space-x-2 sm:justify-end">
+            <div className="relative flex items-center">
+              <select
+                className="bg-bgCard text-white py-2 px-4 rounded-lg appearance-none pr-12 w-24 border border-[#393C49] focus:outline-none sm:w-28"
+                value={selectedSet}
+                onChange={(e) => setSelectedSet(e.target.value)}
+              >
+                <option value="" hidden>
+                  Set
+                </option>
+                {sets.map((set) => (
+                  <option
+                    key={set.id}
+                    value={set.id}
+                    className="py-4 px-8 rounded-lg bg-bgCard text-white border border-[#393C49] hover:bg-[#2E303E]"
+                  >
+                    {set.name}
+                  </option>
+                ))}
+              </select>
+              {selectedSet && (
+                <button
+                  onClick={clearSet}
+                  className="absolute inset-y-0 right-5 flex items-center text-white px-2"
+                >
+                  &#10005;
+                </button>
+              )}
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <FaChevronDown className="w-4 h-4 text-white" />
+              </div>
+            </div>
 
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Templates{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-sm opacity-50">
-            Explore starter templates for Next.js.
-          </p>
-        </a>
+            <div className="relative flex items-center">
+              <select
+                className="bg-bgCard text-white py-2 px-4 rounded-lg appearance-none pr-11 w-28 border border-[#393C49] focus:outline-none sm:w-28"
+                value={selectedRarity}
+                onChange={(e) => setSelectedRarity(e.target.value)}
+              >
+                <option value="" hidden>
+                  Rarity
+                </option>
+                {rarities.map((rarity) => (
+                  <option
+                    key={rarity}
+                    value={rarity}
+                    className="rounded-lg bg-bgCard text-white border border-[#393C49] hover:bg-[#2E303E]"
+                  >
+                    {rarity}
+                  </option>
+                ))}
+              </select>
+              {selectedRarity && (
+                <button
+                  onClick={clearRarity}
+                  className="absolute inset-y-0 right-5 flex items-center text-white px-2"
+                >
+                  &#10005;
+                </button>
+              )}
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <FaChevronDown className="w-4 h-4 text-white" />
+              </div>
+            </div>
 
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className="mb-3 text-2xl font-semibold">
-            Deploy{" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className="m-0 max-w-[30ch] text-balance text-sm opacity-50">
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+            <div className="relative flex items-center">
+              <select
+                className="bg-bgCard text-white py-2 px-4 rounded-lg appearance-none pr-10 w-24 border border-[#393C49] focus:outline-none sm:w-28"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+              >
+                <option value="" hidden>
+                  Type
+                </option>
+                {types.map((type) => (
+                  <option
+                    key={type}
+                    value={type}
+                    className="rounded-lg bg-bgCard text-white border border-[#393C49] hover:bg-[#2E303E]"
+                  >
+                    {type}
+                  </option>
+                ))}
+              </select>
+              {selectedType && (
+                <button
+                  onClick={clearType}
+                  className="absolute inset-y-0 right-5 flex items-center text-white px-2"
+                >
+                  &#10005;
+                </button>
+              )}
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <FaChevronDown className="w-4 h-4 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative grid grid-cols-1 gap-5 mt-6 sm:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6">
+          {notFound || currentData.length === 0 ? (
+            <div className="col-span-6 text-center text-red-500 text-xl">
+              No results found.
+            </div>
+          ) : (
+            currentData.map((item) => (
+              <Card
+                key={item.id}
+                item={item}
+                handleAddToCart={handleAddToCart}
+              />
+            ))
+          )}
+        </div>
+        {notFound || currentData.length === 0 ? (
+          <></>
+        ) : (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            handlePreviousPage={handlePreviousPage}
+            handleNextPage={handleNextPage}
+          />
+        )}
+
+        {isCartVisible && (
+          <Cart
+            cartItems={cartItems}
+            onUpdateCart={handleUpdateCart}
+            onClearCart={handleClearCart}
+            onCloseCart={toggleCartVisibility}
+          />
+        )}
       </div>
     </main>
   );

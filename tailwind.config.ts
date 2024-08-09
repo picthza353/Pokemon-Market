@@ -8,6 +8,17 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      colors: {
+        background: '#252836',
+        orange: '#EA7C69',
+        bgCard: '#1F1D2B',
+        textPrice: '#ABBBC2',
+        overlay: '#000000B2',
+
+      },
+      fontFamily: {
+        sans: ['Poppins', 'sans-serif'],
+      },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
         "gradient-conic":
