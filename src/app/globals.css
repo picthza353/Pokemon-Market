@@ -2,14 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-.dot {
-  border-radius: 100%;
-  width: 4px;
-  height: 4px;
-  background-color: #FFFFFF14;
-  ;
-}
-
 ::-webkit-scrollbar {
   width: 10px;
 }

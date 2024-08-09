@@ -31,7 +31,7 @@ export default function Card({ item, handleAddToCart }: CardProps) {
               Undifined
             </p>
           )}
-          <div className="dot my-auto mx-2"></div>
+          <div className="border border-transparent rounded-full w-1 h-1 my-auto mx-2 bg-[#FFFFFF14]"></div>
           {item.set.total === 0 ? (
             <p className="text-textPrice text-[12px] sm:text-[10px] 2xl:text-[12px]">
               Out of stock
